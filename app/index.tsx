@@ -30,15 +30,20 @@ export default function AuthScreen() {
 
     setLoading(true);
     try {
+      console.log('Auth attempt:', { isLogin, email });
       if (isLogin) {
         await signIn(email, password);
+        console.log('Sign in successful');
         router.replace('/onboarding');
       } else {
+        console.log('Attempting sign up...');
         await signUp(email, password);
+        console.log('Sign up successful');
         router.replace('/onboarding');
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message);
+      console.error('Auth error:', error);
+      Alert.alert('Error', error.message || 'Authentication failed');
     } finally {
       setLoading(false);
     }

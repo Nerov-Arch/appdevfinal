@@ -66,6 +66,11 @@ export default function OnboardingScreen() {
   };
 
   const handleComplete = async () => {
+    if (!user) {
+      Alert.alert('Error', 'User session not found. Please sign in again.');
+      return;
+    }
+
     if (
       !age ||
       !height ||
@@ -81,6 +86,7 @@ export default function OnboardingScreen() {
 
     setLoading(true);
     try {
+      console.log('Starting onboarding for user:', user.id);
       const profile = {
         age: parseInt(age),
         height: parseFloat(height),
@@ -89,28 +95,38 @@ export default function OnboardingScreen() {
         gender,
       };
 
-      await supabase
+      console.log('Updating user profile...');
+      const profileResult = await supabase
         .from('user_profiles')
         .update(profile)
         .eq('id', user!.id);
+      if (profileResult.error) throw profileResult.error;
+      console.log('Profile updated');
 
+      console.log('Saving goals...');
       for (const goal of goals) {
-        await supabase.from('user_goals').insert({
+        const goalResult = await supabase.from('user_goals').insert({
           user_id: user!.id,
           goal_type: goal,
           is_active: true,
         });
+        if (goalResult.error) throw goalResult.error;
       }
+      console.log('Goals saved');
 
+      console.log('Saving medical conditions...');
       for (const condition of conditions) {
-        await supabase.from('user_medical_conditions').insert({
+        const condResult = await supabase.from('user_medical_conditions').insert({
           user_id: user!.id,
           condition,
         });
+        if (condResult.error) throw condResult.error;
       }
+      console.log('Conditions saved');
 
+      console.log('Saving exercise locations...');
       for (const location of locations) {
-        await supabase.from('user_exercise_locations').insert({
+        const locResult = await supabase.from('user_exercise_locations').insert({
           user_id: user!.id,
           location,
         });
@@ -163,9 +179,15 @@ export default function OnboardingScreen() {
         log_date: new Date().toISOString().split('T')[0],
       });
 
-      router.replace('/(tabs)');
+      console.log('All onboarding data saved successfully');
+      setTimeout(() => {
+        console.log('Navigating to tabs...');
+        router.replace('/(tabs)');
+      }, 500);
     } catch (error: any) {
-      Alert.alert('Error', error.message);
+      console.error('Onboarding error:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
+      Alert.alert('Error', error.message || 'Failed to complete onboarding');
     } finally {
       setLoading(false);
     }
@@ -357,13 +379,15 @@ export default function OnboardingScreen() {
         {locationOptions.map((option) => (
           <TouchableOpacity
             key={option.value}
+            activeOpacity={0.7}
             style={[
               styles.card,
               locations.includes(option.value) && styles.cardSelected,
             ]}
-            onPress={() =>
-              toggleSelection(option.value, locations, setLocations)
-            }
+            onPress={() => {
+              console.log('Toggling location:', option.value);
+              toggleSelection(option.value, locations, setLocations);
+            }}
           >
             <Text
               style={[
@@ -385,8 +409,12 @@ export default function OnboardingScreen() {
           <Text style={styles.buttonSecondaryText}>Back</Text>
         </TouchableOpacity>
         <TouchableOpacity
+          activeOpacity={0.8}
           style={[styles.button, loading && styles.buttonDisabled]}
-          onPress={handleComplete}
+          onPress={() => {
+            console.log('Complete button pressed, locations:', locations);
+            handleComplete();
+          }}
           disabled={loading}
         >
           <Text style={styles.buttonText}>
